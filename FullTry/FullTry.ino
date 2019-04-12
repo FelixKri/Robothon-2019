@@ -10,19 +10,21 @@ MeStepper left_wheel(1);
 MeStepper right_wheel(2);
 
 MeLimitSwitch limit_1(PORT_6, 1);
-MeLimitSwitch limit_2(PORT_6, 2);
+MeLimitSwitch limit_2(PORT_6, 2); 
 
-MeGyro gyro(0, 0x69);
+MeGyro gyro(0, 0x69); // onboard
 
 MeRGBLed rgbled_0(0, 12); // 1-12 LED's / 0=all
 
 void setup() {
+
+  Serial.begin(9600);
   
   left_wheel.setMaxSpeed(SPEED);
   right_wheel.setMaxSpeed(SPEED);
   rgbled_0.setpin(44);
   
-  gyro_0.begin();
+  gyro.begin();
   
   rgbled_0.setColor(0,0,0,0);
   rgbled_0.show();
@@ -33,16 +35,22 @@ void loop() {
   rgbled_0.setColor(0,0,0,0);
   rgbled_0.show();
   while(!limit_1.touched() && !limit_2.touched()){
-    moveSteps(HALF_STEP, SPEED);
+    //moveSteps(HALF_STEP, SPEED);
+    turn_angle(90);
   }
   
   
 }
 
 void turn_angle(int angle){
-  while( abs(gyro_0.getAngle(3) - angle) > 2 ){
-    if(angle > 0){
-      
+  while(true) {
+    gyro.update();
+    Serial.println(gyro.getAngle(3));
+    if(gyro.getAngle(3) > angle ){
+      setColors(0,255,0);
+    }
+    if(gyro.getAngle(3) < angle ){
+      setColors(0,0,255);
     }
   }
 }
