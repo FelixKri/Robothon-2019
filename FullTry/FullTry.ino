@@ -180,6 +180,10 @@ drive_back(){
     int sensorState = lineFinder.readSensors();
     i--;
   }
+  delay(100);
+  TurnTo(0);
+  moveStraight(1, 2000);
+  FIRST_RUN = true;
 }
 
 void setColors(int r, int g, int b){
