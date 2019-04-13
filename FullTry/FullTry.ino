@@ -37,7 +37,7 @@ void setup() {
   distGes = 0;
   gyro.begin();
 
-  greifer.run(-25);
+  greifer.run(50); //positive = close
   delay(2000);
   greifer.run(0);
   
@@ -76,21 +76,28 @@ void drive_to_egg(){
 }
 
 void grabb_egg(){
+  //open grabber
+  greifer.run(-30);
+  delay(3000);
+  greifer.run(0);
   //lower arm
   mysmartservo.moveTo(1,90,30);
   delay(1000);
   mysmartservo.setInitAngle(1);
   delay(1000);
   //grab
-  greifer.run(25);
-  delay(2000);
+  greifer.run(30);
+  delay(3000);
   greifer.run(0);
+  delay(1000);
   //rise arm
   mysmartservo.moveTo(1,-90,30);
   delay(1000);
   mysmartservo.setInitAngle(1);
-  //lose
-
+  //open grabber
+  greifer.run(-30);
+  delay(3000);
+  greifer.run(0);
   //continue
 }
 
