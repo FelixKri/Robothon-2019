@@ -37,9 +37,9 @@ void setup() {
   distGes = 0;
   gyro.begin();
 
-  servo.run(-25);
+  greifer.run(-25);
   delay(2000);
-  servo.run(0);
+  greifer.run(0);
   
   setColors(0,0,0);
   
@@ -82,9 +82,9 @@ void grabb_egg(){
   mysmartservo.setInitAngle(1);
   delay(1000);
   //grab
-  servo.run(25);
+  greifer.run(25);
   delay(2000);
-  servo.run(0);
+  greifer.run(0);
   //rise arm
   mysmartservo.moveTo(1,-90,30);
   delay(1000);

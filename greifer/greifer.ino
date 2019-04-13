@@ -3,19 +3,19 @@
 #include <Wire.h>
 #include <SoftwareSerial.h>
 
-MeSmartServo servo(PORT5);
+MeDCMotor greifer(PORT_3);
 
 void setup() {
-  servo.run(-25);
+  greifer.run(-25);
   delay(2000);
-  servo.run(0);
+  greifer.run(0);
 }
 
 void loop() {
-  servo.run(25);
+  greifer.run(25);
   delay(2000);
-  servo.run(0);
+  greifer.run(0);
   delay(2000);
-  servo.run(-25);
+  greifer.run(-25);
   delay(2000);
 }
