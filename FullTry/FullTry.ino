@@ -84,7 +84,7 @@ void search_egg(){
 
     gyro.update();
     zAngle = gyro.getAngle(3);
-    if(getUS() > MIN_DISTANCE)
+    if(getUS() < MIN_DISTANCE)
     {
       found_egg=true;
     }
