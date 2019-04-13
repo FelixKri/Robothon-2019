@@ -3,14 +3,14 @@
 #include <Wire.h>
 
 #define SPEED 3000
-#define STEP 400
-#define HALF_STEP 200
+#define STEP 200
+#define SMALL_STEP 5
 
-MeStepper left_wheel(1);
-MeStepper right_wheel(2);
+MeStepper left_wheel(PORT_1);
+MeStepper right_wheel(PORT_2);
 
-MeLimitSwitch limit_1(PORT_6, 1);
-MeLimitSwitch limit_2(PORT_6, 2); 
+//MeLimitSwitch limit_1(PORT_6, 1);
+//MeLimitSwitch limit_2(PORT_6, 2); 
 
 MeGyro gyro(0, 0x69); // onboard
 
@@ -19,61 +19,56 @@ MeRGBLed rgbled_0(0, 12); // 1-12 LED's / 0=all
 void setup() {
 
   Serial.begin(9600);
+  Serial.println("LOL");
   
   left_wheel.setMaxSpeed(SPEED);
   right_wheel.setMaxSpeed(SPEED);
+  left_wheel.setSpeed(SPEED);
+  right_wheel.setSpeed(SPEED);
   rgbled_0.setpin(44);
-  
+  distGes = 0;
   gyro.begin();
   
-  rgbled_0.setColor(0,0,0,0);
-  rgbled_0.show();
+  setColors(0,0,0);
   
 }
 
 void loop() {
-  rgbled_0.setColor(0,0,0,0);
-  rgbled_0.show();
-  while(!limit_1.touched() && !limit_2.touched()){
-    //moveSteps(HALF_STEP, SPEED);
-    turn_angle(90);
-  }
-  
-  
+  moveSteps(200);
 }
 
 void turn_angle(int angle){
-  while(true) {
+  while(abs(gyro.getAngle(3) - angle) < 1) {
     gyro.update();
-    Serial.println(gyro.getAngle(3));
     if(gyro.getAngle(3) > angle ){
+      turn_left(SMALL_STEP);
       setColors(0,255,0);
     }
     if(gyro.getAngle(3) < angle ){
+      turn_right(SMALL_STEP);
       setColors(0,0,255);
     }
   }
 }
 
-
-void moveSteps(int dist, int _speed){
-
-  left_wheel.setSpeed(_speed);
-  right_wheel.setSpeed(_speed);
+while (distGes <= 1000){
+  void moveSteps(int dist){ 
+    left_wheel.move(- dist);
+    right_wheel.move(dist);
+    distGes += Dist
+  }
   
-  left_wheel.move(-dist);
-  right_wheel.move(dist);
-
-  while (left_wheel.run() || right_wheel.run()){
+  
+  void Step(){
     left_wheel.runSpeedToPosition();
     right_wheel.runSpeedToPosition();
   }
 }
 
-void turn_right(int dist, int _speed){
+void turn_right(int dist){
 
-  left_wheel.setSpeed(_speed);
-  right_wheel.setSpeed(_speed);
+  left_wheel.setSpeed(SPEED);
+  right_wheel.setSpeed(SPEED);
   
   left_wheel.move(-dist);
   right_wheel.move(-dist);
@@ -84,10 +79,10 @@ void turn_right(int dist, int _speed){
   }
 }
 
-void turn_left(int dist, int _speed){
+void turn_left(int dist){
 
-  left_wheel.setSpeed(_speed);
-  right_wheel.setSpeed(_speed);
+  left_wheel.setSpeed(SPEED);
+  right_wheel.setSpeed(SPEED);
   
   left_wheel.move(dist);
   right_wheel.move(dist);
