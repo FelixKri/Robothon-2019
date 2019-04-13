@@ -4,8 +4,9 @@
 #include <SoftwareSerial.h>
 
 // ---------------------- Global Var's ---------------------
-#define MIN_DISTANCE 75
+#define MIN_DISTANCE 80
 #define TURN_TO_THRESHOLD 2
+bool FIRST_RUN = true;
 // ---------------------- Motors/Sensors -------------------
 int dirPin = mePort[PORT_1].s1;//the direction pin connect to Base Board PORT1 SLOT1
 int stpPin = mePort[PORT_1].s2;//the Step pin connect to Base Board PORT1 SLOT2
@@ -15,7 +16,7 @@ int stpPin2 = mePort[PORT_2].s2;//the Step pin connect to Base Board PORT1 SLOT2
 
 MeDCMotor greifer(PORT_3);
 
-MeSmartServo servo(PORT5);
+MeSmartServo mysmartservo(PORT5);
 
 MeUltrasonicSensor ultraSensor(PORT_7);
 
@@ -32,8 +33,8 @@ void setup() {
   Serial.begin(9600);
   Serial.println("LOL");
 
-  servo.begin(115200);
-  servo.assignDevIdRequest();
+  mysmartservo.begin(115200);
+  mysmartservo.assignDevIdRequest();
   
   pinMode(dirPin, OUTPUT);
   pinMode(stpPin, OUTPUT);
@@ -44,37 +45,38 @@ void setup() {
   int distGes = 0;
   gyro.begin();
 
-  greifer.run(50); //positive = close
-  delay(2000);
+  greifer.run(-50); //positive = close
+  delay(3000);
   greifer.run(0);
+
+  mysmartservo.move(1,-40,30);
   
   setColors(0,0,0);
   
 }
 
 void loop() {
+  Serial.println("Let's start.");
   search_egg();
+  Serial.println("Found an egg!");
   drive_to_egg();
+  Serial.println("Yay here it is!");
   grabb_egg();
+  Serial.println("GO GO GO GO");
   //drive_back();
 }
 
 void search_egg(){
-  TurnTo(-90);
+  if(FIRST_RUN){
+    TurnTo(-90);
+    FIRST_RUN = false;
+  }
   bool found_egg = false;
-  /*while(!found_egg){
-    while(getUS() > MIN_DISTANCE){
-      turn(1, 10);
-    }
-    found_egg = true;
-  }*/
-
   int zAngle = gyro.getAngle(3);
   
-  digitalWrite(dirPin,0);
-  digitalWrite(dirPin2,0);
-  while(!found_egg || zAngle>=90) {
-
+  digitalWrite(dirPin,1);
+  digitalWrite(dirPin2,1);
+  while(!found_egg && zAngle<=90) {
     digitalWrite(stpPin, HIGH);
     digitalWrite(stpPin2, HIGH);
     delayMicroseconds(800);
@@ -87,46 +89,76 @@ void search_egg(){
     if(getUS() < MIN_DISTANCE)
     {
       found_egg=true;
+      long start_time = millis();
+      while(getUS() < MIN_DISTANCE){
+        digitalWrite(stpPin, HIGH);
+        digitalWrite(stpPin2, HIGH);
+        delayMicroseconds(800);
+        digitalWrite(stpPin, LOW);
+        digitalWrite(stpPin2, LOW);
+        delayMicroseconds(800); 
+      }
+      long end_time=millis();
+      long duration = (end_time-start_time)/2;
+      digitalWrite(dirPin,0);
+      digitalWrite(dirPin2,0);
+      delay(50);
+      long second_time = millis();
+      while( (millis()-second_time) < duration ){
+        digitalWrite(stpPin, HIGH);
+        digitalWrite(stpPin2, HIGH);
+        delayMicroseconds(800);
+        digitalWrite(stpPin, LOW);
+        digitalWrite(stpPin2, LOW);
+        delayMicroseconds(800); 
+      }
     }
   }
   //else continue
 }
 
 void drive_to_egg(){
-  //while(5 < getUS() < 75){
-    //drive_straight(); //short distance
-  //}
-  //turn_and_reposition();
-  //if(!limit1.touched() && !limit2.touched()){
-  //  drive_to_egg();
-  //}
-  //else continue to next
+  digitalWrite(dirPin,1);
+  digitalWrite(dirPin2,0);
+  delay(50);
+  while(!limit_1.touched() && !limit_2.touched()){
+    digitalWrite(stpPin, HIGH);
+    digitalWrite(stpPin2, HIGH);
+    delayMicroseconds(800);
+    digitalWrite(stpPin, LOW);
+    digitalWrite(stpPin2, LOW);
+    delayMicroseconds(800);
+  }
+  moveStraight(1, 200);
+  delay(100);
 }
 
 void grabb_egg(){
   //open grabber
   greifer.run(-30);
-  delay(3000);
+  delay(5000);
   greifer.run(0);
   //lower arm
-  //mysmartservo.moveTo(1,90,30);
-  delay(1000);
-//  mysmartservo.setInitAngle(1);
+  Serial.println("GO MOVE!");
+  mysmartservo.move(1,-145,30);
+  Serial.println("GO MOVE! END");
   delay(1000);
   //grab
   greifer.run(30);
-  delay(3000);
+  delay(5000);
   greifer.run(0);
   delay(1000);
   //rise arm
-//  mysmartservo.moveTo(1,-90,30);
+  Serial.println("GO MOVE REV!");
+  mysmartservo.move(1,145,30);
+  Serial.println("GO MOVE REV! END");
   delay(1000);
-//  mysmartservo.setInitAngle(1);
   //open grabber
   greifer.run(-30);
-  delay(3000);
+  delay(5000);
   greifer.run(0);
   //continue
+  setColors(255,255,255);
 }
 
 void setColors(int r, int g, int b){
@@ -169,7 +201,7 @@ void TurnTo(int angle) {
   digitalWrite(dirPin2,zAngle<angle);
   delay(50);
   while(abs (zAngle-angle)> TURN_TO_THRESHOLD) {
-    Serial.println(zAngle);
+    //Serial.println(zAngle);
     digitalWrite(stpPin, HIGH);
     digitalWrite(stpPin2, HIGH);
     delayMicroseconds(800);
@@ -183,8 +215,8 @@ void TurnTo(int angle) {
 }
 double getUS()
 {
-  Serial.print("US ");
-  Serial.println(ultraSensor.distanceCm());
+  //Serial.print("US ");
+  //Serial.println(ultraSensor.distanceCm());
   return ultraSensor.distanceCm();
 }
 

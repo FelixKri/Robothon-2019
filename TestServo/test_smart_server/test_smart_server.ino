@@ -1,7 +1,5 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <SoftwareSerial.h>
-
 #include <MeAuriga.h>
 #include "Wire.h"
 
@@ -21,5 +19,9 @@ void setup(){
          delay(1000);
         mysmartservo.setInitAngle(1);
          delay(1000);    
+}
+void loop(){
+
+  
 }
 
