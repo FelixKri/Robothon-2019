@@ -8,6 +8,7 @@
 #define TURN_TO_THRESHOLD 2
 bool FIRST_RUN = true;
 int steps;
+bool found_egg = false;
 // ---------------------- Motors/Sensors -------------------
 int dirPin = mePort[PORT_1].s1;//the direction pin connect to Base Board PORT1 SLOT1
 int stpPin = mePort[PORT_1].s2;//the Step pin connect to Base Board PORT1 SLOT2
@@ -22,6 +23,8 @@ MeSmartServo mysmartservo(PORT5);
 MeUltrasonicSensor ultraSensor(PORT_7);
 
 MeLineFollower lineFinder(PORT_8);
+
+MeCompass compas(PORT_10);
 
 MeLimitSwitch limit_1(PORT_6, 1);
 MeLimitSwitch limit_2(PORT_6, 2); 
@@ -46,6 +49,7 @@ void setup() {
   rgbled_0.setpin(44);
   int distGes = 0;
   gyro.begin();
+  compas.begin();
 
   greifer.run(-50); //positive = close
   delay(3000);
@@ -59,13 +63,19 @@ void setup() {
 
 void loop() {
   Serial.println("Let's start.");
+
   search_egg();
-  Serial.println("Found an egg!");
-  drive_to_egg();
-  Serial.println("Yay here it is!");
-  grabb_egg();
-  Serial.println("GO GO GO GO");
-  //drive_back();
+  if(found_egg){
+    Serial.println("Found an egg!");
+    drive_to_egg();
+  }if(found_egg){
+    Serial.println("Yay here it is!");
+    grabb_egg();
+  }if(found_egg){
+    Serial.println("GO GO GO GO");
+    drive_back();
+  }
+  toNext();
 }
 
 void search_egg(){
@@ -73,13 +83,14 @@ void search_egg(){
     TurnTo(-90);
     FIRST_RUN = false;
   }
-  bool found_egg = false;
   int zAngle = gyro.getAngle(3);
   
   digitalWrite(dirPin,1);
   digitalWrite(dirPin2,1);
-  while(!found_egg && zAngle<=90) {
-    Serial.println(zAngle);
+  
+  int i = 0;
+  
+  while(!found_egg) {
     digitalWrite(stpPin, HIGH);
     digitalWrite(stpPin2, HIGH);
     delayMicroseconds(800);
@@ -87,29 +98,66 @@ void search_egg(){
     digitalWrite(stpPin2, LOW);
     delayMicroseconds(800); 
 
-    gyro.update();
-    zAngle = gyro.getAngle(3);
-    
-    if(getUS() < MIN_DISTANCE)
-    {
-      found_egg=true;
-      long start_time = millis();
-      while(getUS() < MIN_DISTANCE){
-        digitalWrite(stpPin, HIGH);
-        digitalWrite(stpPin2, HIGH);
-        delayMicroseconds(800);
-        digitalWrite(stpPin, LOW);
-        digitalWrite(stpPin2, LOW);
-        delayMicroseconds(800); 
+    if(i == 9){
+      found_egg = getUSbool();
+      i = 0;
+    }
+    i++;
+  
+    //gyro.update();
+    //zAngle = gyro.getAngle(3);
+  }
+  if(found_egg)
+  {
+    setColors(0,255,0);
+    double last_distance = getUS();
+    digitalWrite(dirPin,1);
+    digitalWrite(dirPin2,1);
+    delay(50);
+    /*bool dummy = true;
+    while(getUS() < MIN_DISTANCE && dummy){
+          digitalWrite(stpPin, HIGH);
+          digitalWrite(stpPin2, HIGH);
+          delayMicroseconds(800);
+          digitalWrite(stpPin, LOW);
+          digitalWrite(stpPin2, LOW);
+          delayMicroseconds(800); 
+          if(last_distance < getUS())
+             dummy = false;
+    }*/
+    long start_time = millis();
+    while(getUS() < MIN_DISTANCE){
+          digitalWrite(stpPin, HIGH);
+          digitalWrite(stpPin2, HIGH);
+          delayMicroseconds(800);
+          digitalWrite(stpPin, LOW);
+          digitalWrite(stpPin2, LOW);
+          delayMicroseconds(800); 
+    }
+    long end_time=millis();
+    long duration = (end_time-(start_time))/2;
+    digitalWrite(dirPin,0);
+    digitalWrite(dirPin2,0);
+    delay(50);
+    long second_time = millis();
+    double distance = 100000.0;
+    while( ((millis()-second_time) < duration)){
+      if(distance > getUS()){
+        setColors(0,150,0);
       }
-      center();
+      distance = getUS();
+      digitalWrite(stpPin, HIGH);
+      digitalWrite(stpPin2, HIGH);
+      delayMicroseconds(800);
+      digitalWrite(stpPin, LOW);
+      digitalWrite(stpPin2, LOW);
+      delayMicroseconds(800); 
     }
   }
   //else continue
 }
 
 void drive_to_egg(){
-  
   int sensorState = lineFinder.readSensors();
   digitalWrite(dirPin,1);
   digitalWrite(dirPin2,0);
@@ -129,11 +177,9 @@ void drive_to_egg(){
   if(sensorState == S1_IN_S2_IN){
     Serial.println("go back");
     setColors(255,0,0);
-    _loop();
+    found_egg = false;
   }
-  moveStraight(0, 200);
-  delay(100);
-  center();
+  moveStraight(0, 100);
   delay(100);
 }
 
@@ -143,9 +189,7 @@ void grabb_egg(){
   delay(5000);
   greifer.run(0);
   //lower arm
-  Serial.println("GO MOVE!");
   mysmartservo.move(1,-145,30);
-  Serial.println("GO MOVE! END");
   delay(1000);
   //grab
   greifer.run(30);
@@ -153,9 +197,7 @@ void grabb_egg(){
   greifer.run(0);
   delay(1000);
   //rise arm
-  Serial.println("GO MOVE REV!");
   mysmartservo.move(1,145,30);
-  Serial.println("GO MOVE REV! END");
   delay(1000);
   //open grabber
   greifer.run(-30);
@@ -165,21 +207,24 @@ void grabb_egg(){
   setColors(255,255,255);
 }
 
-drive_back(){
+void drive_back(){
   digitalWrite(dirPin,0);
   digitalWrite(dirPin2,1);
   delay(50);
-  i = i-200;
-  while(i > 0){
+  steps = steps/2;
+  while(steps > 0 && lineFinder.readSensors() != S1_IN_S2_IN){
     digitalWrite(stpPin, HIGH);
     digitalWrite(stpPin2, HIGH);
     delayMicroseconds(800);
     digitalWrite(stpPin, LOW);
     digitalWrite(stpPin2, LOW);
     delayMicroseconds(800);
-    int sensorState = lineFinder.readSensors();
-    i--;
+    steps--;
   }
+  toNext();
+}
+
+void toNext(){
   delay(100);
   TurnTo(0);
   moveStraight(1, 2000);
@@ -199,6 +244,9 @@ void moveStraight(boolean dir,int steps)
   delay(50);
   for(int i=0;i<steps;i++)
   {
+    if(lineFinder.readSensors() == S1_IN_S2_IN){
+      toNext();
+    }
     digitalWrite(stpPin, HIGH);
     digitalWrite(stpPin2, HIGH);
     delayMicroseconds(800);
@@ -238,9 +286,20 @@ void TurnTo(int angle) {
     zAngle = gyro.getAngle(3);
   }
 }
-void center(){
+void center(long start_time){
+  digitalWrite(dirPin,1);
+  digitalWrite(dirPin2,1);
+  delay(50);
+  while(getUS() < MIN_DISTANCE){
+        digitalWrite(stpPin, HIGH);
+        digitalWrite(stpPin2, HIGH);
+        delayMicroseconds(800);
+        digitalWrite(stpPin, LOW);
+        digitalWrite(stpPin2, LOW);
+        delayMicroseconds(800); 
+   }
   long end_time=millis();
-  long duration = (end_time-start_time)/2;
+  long duration = (end_time-(start_time+50))/2;
   digitalWrite(dirPin,0);
   digitalWrite(dirPin2,0);
   delay(50);
@@ -256,9 +315,12 @@ void center(){
 }
 double getUS()
 {
-  //Serial.print("US ");
-  //Serial.println(ultraSensor.distanceCm());
   return ultraSensor.distanceCm();
+}
+bool getUSbool(){
+  if(ultraSensor.distanceCm()<MIN_DISTANCE)
+    return true;
+  return false;
 }
 
 void _loop(){
